@@ -20,7 +20,7 @@ def r(x, nd=6):
 
 
 bundle = {}
-for name in ("ba100_learners", "er40_learners", "scaling", "communication", "topology", "network", "run_info"):
+for name in ("ba100_learners", "er40_learners", "scaling", "communication", "topology", "network", "rounding", "run_info"):
     p = RES / f"{name}.json"
     if p.exists():
         bundle[name] = r(json.loads(p.read_text()), 5)

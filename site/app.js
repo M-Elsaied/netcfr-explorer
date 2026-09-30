@@ -41,7 +41,7 @@
       const [m, e] = x.toExponential(1).split("e");
       return `${m}×10${sup(parseInt(e, 10))}`;
     }
-    return Number(x.toPrecision(d)).toLocaleString();
+    return Number(x.toPrecision(d)).toLocaleString(undefined, { maximumSignificantDigits: d });
   };
 
   // ------------------------------------------------------------------ chart helpers
@@ -89,7 +89,7 @@
   // ------------------------------------------------------------------ data
   let D = null;
   const state = { netGraph: "er40", netLearner: "cfr+", netProfile: "gap_avg", netColor: "gap", netIdx: 0,
-    lcGraph: "ba100", lcProfile: "nc_avg", selected: null };
+    lcGraph: "ba100", lcProfile: "nc_avg", selected: null, rdLearner: "cfr+", rdBits: 1 };
 
   fetch("data/results.json").then((r) => r.json()).then((data) => {
     D = data;
@@ -104,7 +104,7 @@
     if (!D) return;
     chartDefaults();
     renderKpis(); renderNetwork(); renderLearning(); renderFeedback(); renderCommunication();
-    renderScaling(); renderTopology(); renderFooter();
+    renderRounding(); renderScaling(); renderTopology(); renderFooter();
   }
 
   // ------------------------------------------------------------------ KPIs
@@ -140,6 +140,8 @@
     document.getElementById("net-play").addEventListener("click", togglePlay);
     segmented("lc-graph", [["ba100", "100 agents"], ["er40", "40 agents"]], state.lcGraph, (v) => { state.lcGraph = v; renderLearning(); });
     segmented("lc-profile", [["nc_avg", "Average profile"], ["nc_last", "Current policy"]], state.lcProfile, (v) => { state.lcProfile = v; renderLearning(); });
+    segmented("rd-learner", [["cfr+", "CFR+"], ["cfr", "CFR"]], state.rdLearner, (v) => { state.rdLearner = v; renderRounding(); });
+    segmented("rd-bits", [[1, "1 bit"], [2, "2 bits"], [3, "3 bits"]], state.rdBits, (v) => { state.rdBits = v; renderRounding(); });
   }
   function fillLearners() {
     const sel = document.getElementById("net-learner");
@@ -306,6 +308,36 @@
       network, sending the public game description once would take about ${fmt(cm.centralized.bits_once)} bits, and a single linear
       program solves it exactly in ${fmt(cm.centralized.lp_seconds, 2)} s. 1,000 learning iterations with 3-bit messages move
       ${fmt(q3.bits_per_iter * 1000 / 1e6, 2)} million bits. Local learning pays off when no single party can see the whole network.`;
+  }
+
+  // ------------------------------------------------------------------ rounding schemes
+  function renderRounding() {
+    if (!D.rounding) return;
+    const R = D.rounding.runs[state.rdLearner], q = state.rdBits;
+    const pts = (c, key = "nc") => c.t.map((t, j) => ({ x: t, y: Math.max(c[key][j], 1e-6) }));
+    const C = { det: "#c92a2a", sto: "#1c7ed6", ef: "#12b886" };
+    const sto = R[`sto${q}`];
+    makeChart("rd-chart", { type: "line", data: { datasets: [
+      { label: "Exact messages", data: pts(R.exact), borderColor: css("--text"), borderWidth: 2, pointRadius: 0 },
+      { label: `Deterministic, ${q} bit${q > 1 ? "s" : ""}`, data: pts(R[`det${q}`]), borderColor: C.det, borderDash: [6, 4], borderWidth: 2, pointRadius: 0 },
+      { label: "seed band", data: pts(sto, "lo"), borderColor: "transparent", pointRadius: 0, fill: false },
+      { label: "seed band hi", data: pts(sto, "hi"), borderColor: "transparent", backgroundColor: C.sto + "33", pointRadius: 0, fill: "-1" },
+      { label: `Stochastic, ${q} bit${q > 1 ? "s" : ""} (mean of ${sto.seeds} seeds)`, data: pts(sto), borderColor: C.sto, borderWidth: 2, pointRadius: 0 },
+      { label: `Error feedback, ${q} bit${q > 1 ? "s" : ""}`, data: pts(R[`ef${q}`]), borderColor: C.ef, borderDash: [2, 3], borderWidth: 2.5, pointRadius: 0 },
+    ] }, options: { parsing: false,
+      scales: { x: logAxis("Iteration"), y: logAxis("NashConv per agent (average profile)") },
+      plugins: { legend: { position: "bottom", labels: { boxWidth: 14, filter: (it) => !it.text.startsWith("seed band") } },
+        tooltip: { filter: (it) => !it.dataset.label.startsWith("seed band"), callbacks: tooltipFmt.callbacks } } } });
+    const last = (c) => c.nc[c.nc.length - 1];
+    const ex = last(R.exact);
+    const row = (name, key, color, note) => `<tr><td><span class="sw" style="background:${color}"></span>${name}</td>` +
+      [1, 2, 3].map((b) => `<td>${fmt(last(R[`${key}${b}`]), 3)}</td>`).join("") + `<td>${note}</td></tr>`;
+    document.getElementById("rd-table").innerHTML =
+      `<thead><tr><th>Rounding (${state.rdLearner.toUpperCase()}, ${D.rounding.T.toLocaleString()} iterations)</th><th>1 bit</th><th>2 bits</th><th>3 bits</th><th>Sender state</th></tr></thead><tbody>` +
+      row("Deterministic", "det", C.det, "none") + row("Stochastic (mean of 5 seeds)", "sto", C.sto, "random draws") +
+      row("Error feedback", "ef", C.ef, "one residual per message") +
+      `<tr><td><span class="sw" style="background:${css("--text")}"></span>Exact messages</td><td colspan="3">${fmt(ex, 3)}</td><td>—</td></tr>` +
+      `<tr><td class="muted">Bits per iteration</td>${[1, 2, 3].map((b) => `<td class="muted">${fmt(R[`bits${b}`])}</td>`).join("")}<td></td></tr></tbody>`;
   }
 
   // ------------------------------------------------------------------ scaling

@@ -14,7 +14,7 @@
       <div class="brand"><span class="dot"></span>NetCFR Explorer</div>
       <nav>
         <a href="#network">Network</a><a href="#learning">Learning</a><a href="#feedback">Feedback</a>
-        <a href="#communication">Communication</a><a href="#scaling">Scaling</a><a href="#topology">Topology</a>
+        <a href="#communication">Communication</a><a href="#rounding">Rounding</a><a href="#scaling">Scaling</a><a href="#topology">Topology</a>
       </nav>
       <button id="theme" class="icon-btn" aria-label="Toggle color theme" title="Toggle theme">◐</button>
     </div>
@@ -109,6 +109,23 @@
           <p class="note">The guaranteed error term 4·ε·ΣΔ is valid but pessimistic by orders of magnitude.</p></div>
       </div>
       <div class="callout" id="cm-central"></div>
+    </section>
+
+    <section id="rounding" class="card">
+      <div class="sec-head"><div><h2>How you round matters as much as how many bits</h2>
+        <p class="sub">Same instance, same q bits per probability, three ways to round. Deterministic rounding biases
+          every payoff an agent perceives and learning stalls; unbiased stochastic rounding and error feedback let the
+          bias cancel out over time.</p></div></div>
+      <div class="controls">
+        <div class="seg" id="rd-learner"></div>
+        <div class="seg" id="rd-bits"></div>
+      </div>
+      <div class="chart tall"><canvas id="rd-chart"></canvas></div>
+      <div class="table-wrap"><table id="rd-table"></table></div>
+      <p class="note">Stochastic rounding sends ⌊xL + U⌋/L with fresh uniform U, so each received value is correct on
+        average; the shaded band spans five random seeds. Error feedback adds the previous rounding residual before
+        rounding, which needs one stored number per message at the sender. Values are NashConv per agent of the
+        average profile after the final iteration.</p>
     </section>
 
     <section id="scaling" class="card">

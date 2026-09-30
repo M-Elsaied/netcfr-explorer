@@ -22,7 +22,8 @@ sys.path.insert(0, str(ROOT))
 from netcfr import instances as ins  # noqa: E402
 from netcfr.lp import security_value, solve_ne  # noqa: E402
 from netcfr.sampled import bandit, pg_exact, reinforce  # noqa: E402
-from netcfr.solvers import fictitious_play, laplace, netcfr, quantizer  # noqa: E402
+from netcfr.solvers import (error_feedback_quantizer, fictitious_play, laplace, netcfr, quantizer,  # noqa: E402
+                            stochastic_quantizer)
 
 RES = ROOT / "results"
 RES.mkdir(exist_ok=True)
@@ -123,6 +124,29 @@ def topology():
     save("topology", dict(rows=rows))
 
 
+def rounding(T=10000, every=250, seeds=range(5)):
+    """Deterministic vs unbiased stochastic vs error-feedback rounding of q-bit messages."""
+    g = ins.er100_comm()
+
+    def curve(variant, channel):
+        r = netcfr(g, variant, T=T, log_every=every, track_last=False, channel=channel)
+        return dict(t=r["log"].t, nc=[x / g.n for x in r["log"].nc_avg])
+
+    out = dict(T=T, n=g.n, edges=g.E, runs={})
+    for variant in ("cfr+", "cfr"):
+        R = out["runs"][variant] = dict(exact=curve(variant, None))
+        for q in (1, 2, 3):
+            R[f"det{q}"] = curve(variant, quantizer(q))
+            sto = [curve(variant, stochastic_quantizer(q, seed=s)) for s in seeds]
+            arr = np.array([c["nc"] for c in sto])
+            R[f"sto{q}"] = dict(t=sto[0]["t"], nc=arr.mean(0).tolist(), lo=arr.min(0).tolist(),
+                                hi=arr.max(0).tolist(), seeds=len(sto))
+            R[f"ef{q}"] = curve(variant, error_feedback_quantizer(q))
+            R[f"bits{q}"] = g.bits_per_iteration(q)
+        print("   ", variant, "done", flush=True)
+    save("rounding", out)
+
+
 SNAPS = [1, 2, 3, 5, 7, 10, 15, 20, 30, 50, 70, 100, 150, 200, 300, 500, 700, 1000, 1500, 2000, 3000]
 
 
@@ -157,7 +181,7 @@ def network():
 
 
 EXPS = dict(ba100=ba100_learners, er40=er40_learners, scaling=scaling, communication=communication,
-            topology=topology, network=network)
+            topology=topology, network=network, rounding=rounding)
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()

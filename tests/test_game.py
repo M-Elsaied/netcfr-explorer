@@ -190,3 +190,36 @@ def test_quantized_run_satisfies_distortion_bound():
     r = netcfr(g, "cfr", T=300, log_every=0, track_last=False, channel=quantizer(q))
     nc = g.nashconv(*r["avg"])[0]
     assert nc <= 4 * eps * g.delta().sum()     # regret term is non-negative, so this is implied
+
+
+def test_stochastic_rounding_is_unbiased_and_on_grid():
+    from netcfr.solvers import stochastic_quantizer
+    g = ins.er100_comm()
+    rng = np.random.default_rng(5)
+    beta, gamma = rng.random((g.n, g.M)), rng.random((2 * g.E, g.M))
+    ch = stochastic_quantizer(2, seed=1)
+    L = 3
+    acc_b = np.zeros_like(beta[g.dst]); acc_v = np.zeros((g.n, g.M))
+    true_v = g.values(beta, gamma).B
+    N = 4000
+    for _ in range(N):
+        pb, pg = ch(g, beta, gamma)
+        assert np.allclose(pb * L, np.round(pb * L)) and pb.min() >= 0 and pb.max() <= 1
+        acc_b += pb
+        acc_v += g.values(beta, gamma, (pb, pg)).B
+    assert np.abs(acc_b / N - beta[g.dst]).max() < 0.03          # E[Q(x)] = x
+    assert np.abs(acc_v / N - true_v).max() < 0.01               # perceived values unbiased
+
+
+def test_error_feedback_running_sum_tracks_truth():
+    from netcfr.solvers import error_feedback_quantizer
+    g = ins.er100_comm()
+    rng = np.random.default_rng(7)
+    ch = error_feedback_quantizer(1)
+    tb = np.zeros((2 * g.E, g.M)); rb = np.zeros_like(tb)
+    for _ in range(500):
+        beta, gamma = rng.random((g.n, g.M)), rng.random((2 * g.E, g.M))
+        pb, _ = ch(g, beta, gamma)
+        assert set(np.unique(pb)) <= {0.0, 1.0}
+        tb += beta[g.dst]; rb += pb
+    assert np.abs(tb - rb).max() <= 1.0 + 1e-9          # residual stays bounded by the grid step

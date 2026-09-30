@@ -218,3 +218,38 @@ def laplace(sigma: float, seed: int = 23):
                 np.clip(gj + rng.laplace(0, sigma, gj.shape), 0, 1))
     ch.name = f"laplace{sigma}"
     return ch
+
+
+def stochastic_quantizer(q: int, seed: int = 0):
+    """Unbiased (dithered) rounding to the grid {0, 1/L, ..., 1}, L = 2^q - 1:
+    Q(x) = floor(x L + U) / L with U ~ Uniform[0, 1), so E[Q(x)] = x. Every entry is rounded
+    independently, so every perceived counterfactual value is unbiased."""
+    L = 2**q - 1
+    rng = np.random.default_rng(seed)
+
+    def ch(g: NSP, beta, gamma):
+        bj, gj = beta[g.dst] * L, gamma[g.rev] * L
+        return (np.floor(bj + rng.random(bj.shape)) / L,
+                np.floor(gj + rng.random(gj.shape)) / L)
+    ch.name = f"sq{q}"
+    return ch
+
+
+def error_feedback_quantizer(q: int):
+    """Deterministic rounding with error feedback: each directed message keeps the residual of
+    its previous rounding and adds it before the next one, e_{t+1} = (x_t + e_t) - Q(x_t + e_t).
+    The running sum of received values tracks the true running sum, at the price of one stored
+    residual per transmitted probability at the sender."""
+    L = 2**q - 1
+    state = {}
+
+    def ch(g: NSP, beta, gamma):
+        bj, gj = beta[g.dst], gamma[g.rev]
+        if not state:
+            state["eb"] = np.zeros_like(bj); state["eg"] = np.zeros_like(gj)
+        vb, vg = bj + state["eb"], gj + state["eg"]
+        qb, qg = np.clip(np.round(vb * L) / L, 0, 1), np.clip(np.round(vg * L) / L, 0, 1)
+        state["eb"], state["eg"] = vb - qb, vg - qg
+        return qb, qg
+    ch.name = f"ef{q}"
+    return ch
