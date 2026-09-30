@@ -1,0 +1,88 @@
+{
+ "rows": [
+  {
+   "family": "ba",
+   "r": 0,
+   "n": 100,
+   "edges": 291,
+   "iterations": 2540
+  },
+  {
+   "family": "ba",
+   "r": 1,
+   "n": 100,
+   "edges": 291,
+   "iterations": 2750
+  },
+  {
+   "family": "ba",
+   "r": 2,
+   "n": 100,
+   "edges": 291,
+   "iterations": 3030
+  },
+  {
+   "family": "sbm",
+   "r": 0,
+   "n": 100,
+   "edges": 251,
+   "iterations": 3210
+  },
+  {
+   "family": "sbm",
+   "r": 1,
+   "n": 100,
+   "edges": 282,
+   "iterations": 3410
+  },
+  {
+   "family": "sbm",
+   "r": 2,
+   "n": 100,
+   "edges": 285,
+   "iterations": 3010
+  },
+  {
+   "family": "er",
+   "r": 0,
+   "n": 100,
+   "edges": 285,
+   "iterations": 3550
+  },
+  {
+   "family": "er",
+   "r": 1,
+   "n": 100,
+   "edges": 300,
+   "iterations": 3080
+  },
+  {
+   "family": "er",
+   "r": 2,
+   "n": 100,
+   "edges": 316,
+   "iterations": 3280
+  },
+  {
+   "family": "ws",
+   "r": 0,
+   "n": 100,
+   "edges": 300,
+   "iterations": 4380
+  },
+  {
+   "family": "ws",
+   "r": 1,
+   "n": 100,
+   "edges": 300,
+   "iterations": 3500
+  },
+  {
+   "family": "ws",
+   "r": 2,
+   "n": 100,
+   "edges": 300,
+   "iterations": 4060
+  }
+ ]
+}

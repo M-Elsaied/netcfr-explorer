@@ -1,0 +1,30 @@
+{
+ "rows": [
+  {
+   "n": 1000,
+   "edges": 3077,
+   "build_s": 0.0176328000088688,
+   "s_per_iter": 0.0016661009984090924,
+   "us_per_edge_iter": 0.5414692877507613,
+   "nashconv_per_agent": 0.024680073928542736
+  },
+  {
+   "n": 10000,
+   "edges": 30222,
+   "build_s": 0.1607361999922432,
+   "s_per_iter": 0.0369593930002884,
+   "us_per_edge_iter": 1.2229300840542783,
+   "nashconv_per_agent": 0.026352163708261638
+  },
+  {
+   "n": 100000,
+   "edges": 300389,
+   "build_s": 1.808919600007357,
+   "s_per_iter": 0.3789416089997394,
+   "us_per_edge_iter": 1.2615029478434276,
+   "nashconv_per_agent": 0.026041553238674613
+  }
+ ],
+ "slope_time_vs_edges": 1.1844728158106452,
+ "machine": "Intel64 Family 6 Model 189 Stepping 1, GenuineIntel"
+}

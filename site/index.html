@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NetCFR Explorer</title>
+  <meta name="description" content="Interactive results of simulations of local regret minimization on networks of zero-sum poker contests.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='8' cy='9' r='5' fill='%231c7ed6'/><circle cx='24' cy='9' r='5' fill='%23e8590c'/><circle cx='16' cy='24' r='5' fill='%2312b886'/><path d='M8 9L24 9L16 24Z' fill='none' stroke='%23868e96' stroke-width='2'/></svg>">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <div class="wrap top-inner">
+      <div class="brand"><span class="dot"></span>NetCFR Explorer</div>
+      <nav>
+        <a href="#network">Network</a><a href="#learning">Learning</a><a href="#feedback">Feedback</a>
+        <a href="#communication">Communication</a><a href="#scaling">Scaling</a><a href="#topology">Topology</a>
+      </nav>
+      <button id="theme" class="icon-btn" aria-label="Toggle color theme" title="Toggle theme">◐</button>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="hero">
+      <h1>How networks of self-interested agents learn to play equilibrium</h1>
+      <p class="lede">Every agent sits on a node and plays a separate zero-sum poker contest with each neighbor, but it
+        must choose <em>one</em> stance (check or bet) for all of its contests at once. Agents update from local,
+        counterfactual information only. These pages show how close the network gets to equilibrium, how fast, and
+        what it costs in communication.</p>
+      <div class="kpis" id="kpis"></div>
+    </section>
+
+    <section class="card explainer">
+      <h2>Reading the numbers</h2>
+      <div class="grid3">
+        <div><h3>The game</h3><p>Each agent draws a private card. On every edge the two endpoints ante; an agent that
+          bets raises the stake on <em>all</em> its edges; a checking agent facing a bet folds or calls on that edge.
+          Every edge is zero-sum, so the whole network is too.</p></div>
+        <div><h3>Exploitability</h3><p><strong>NashConv</strong> sums, over agents, how much each could gain by
+          deviating alone. It is exactly 0 at a Nash equilibrium and is computed exactly here, never estimated.</p></div>
+        <div><h3>Average vs. current</h3><p>No-regret learners guarantee that their <strong>time-averaged</strong>
+          play converges. The <strong>current</strong> policy — what a deployed agent actually plays — may keep
+          cycling. Both are shown throughout.</p></div>
+      </div>
+    </section>
+
+    <section id="network" class="card">
+      <div class="sec-head">
+        <div><h2>Watch the network learn</h2>
+          <p class="sub">Node color is each agent's own exploitability (how much it could still gain by deviating).
+            Drag the slider or press play.</p></div>
+      </div>
+      <div class="controls">
+        <div class="seg" id="net-graph"></div>
+        <label>Learner <select id="net-learner"></select></label>
+        <div class="seg" id="net-profile"></div>
+        <div class="seg" id="net-color"></div>
+      </div>
+      <div class="net-layout">
+        <div class="net-canvas">
+          <svg id="net-svg" viewBox="0 0 1000 720" role="img" aria-label="Network of agents colored by exploitability"></svg>
+          <div class="legend" id="net-legend"></div>
+        </div>
+        <aside class="net-side">
+          <div class="stat"><span class="lbl">Iteration</span><span class="val" id="net-t">1</span></div>
+          <div class="stat"><span class="lbl">Total NashConv</span><span class="val" id="net-nc">–</span></div>
+          <div class="stat"><span class="lbl">Worst agent</span><span class="val" id="net-max">–</span></div>
+          <div class="node-card" id="net-node"><p class="muted">Hover or tap an agent for details.</p></div>
+        </aside>
+      </div>
+      <div class="player">
+        <button id="net-play" class="btn">▶ Play</button>
+        <input type="range" id="net-slider" min="0" max="0" value="0" aria-label="Iteration">
+      </div>
+      <p class="note">Edges are colored by bet ratio (how much a bet raises the stake). Agents facing mixed bet ratios
+        cannot fit one stance to every contest, which is where exploitability concentrates early on.</p>
+    </section>
+
+    <section id="learning" class="card">
+      <div class="sec-head"><div><h2>Learning curves</h2>
+        <p class="sub">Total NashConv over 3,000 full-width iterations (log scale). Toggle learners in the legend.</p></div></div>
+      <div class="controls">
+        <div class="seg" id="lc-graph"></div>
+        <div class="seg" id="lc-profile"></div>
+      </div>
+      <div class="chart tall"><canvas id="lc-chart"></canvas></div>
+      <div class="table-wrap"><table id="lc-table"></table></div>
+    </section>
+
+    <section id="feedback" class="card">
+      <div class="sec-head"><div><h2>How much does feedback quality matter?</h2>
+        <p class="sub">40-agent network. Full-width counterfactual updates versus learners that only see sampled or
+          realized payoffs. Lower is better (log scale).</p></div></div>
+      <div class="chart"><canvas id="fb-chart"></canvas></div>
+      <p class="note">Sampled learners: REINFORCE (64 sampled deals per iteration), an exact policy-gradient critic,
+        and an outcome-sampling EXP3 bandit run for 60,000 iterations. Iterations are not equal in cost: a
+        full-width iteration uses exact expectations, a sampled one uses 1–64 deals.</p>
+    </section>
+
+    <section id="communication" class="card">
+      <div class="sec-head"><div><h2>Communication: how many bits does learning need?</h2>
+        <p class="sub">100-agent network. Neighbors exchange strategy probabilities rounded to q bits, or perturbed by
+          Laplace noise.</p></div></div>
+      <div class="grid2">
+        <div><h3>Accuracy vs. bits per iteration</h3><div class="chart"><canvas id="cm-knee"></canvas></div></div>
+        <div><h3>Convergence under each precision</h3><div class="chart"><canvas id="cm-curves"></canvas></div></div>
+        <div><h3>Noisy messages</h3><div class="chart"><canvas id="cm-noise"></canvas></div></div>
+        <div><h3>Worst-case bound vs. measured</h3><div class="chart"><canvas id="cm-bound"></canvas></div>
+          <p class="note">The guaranteed error term 4·ε·ΣΔ is valid but pessimistic by orders of magnitude.</p></div>
+      </div>
+      <div class="callout" id="cm-central"></div>
+    </section>
+
+    <section id="scaling" class="card">
+      <div class="sec-head"><div><h2>Scaling to 100,000 agents</h2>
+        <p class="sub">Sparse random graphs, mean degree 6. One iteration updates every agent from its incident
+          edges only.</p></div></div>
+      <div class="grid2">
+        <div><h3>Seconds per iteration</h3><div class="chart"><canvas id="sc-time"></canvas></div></div>
+        <div><h3>Exploitability per agent after 100 iterations</h3><div class="chart"><canvas id="sc-nc"></canvas></div></div>
+      </div>
+      <p class="note" id="sc-note"></p>
+    </section>
+
+    <section id="topology" class="card">
+      <div class="sec-head"><div><h2>Does network shape matter?</h2>
+        <p class="sub">Iterations CFR+ needs to reach NashConv per agent ≤ 10⁻³ on 100-agent graphs, three random
+          graphs per family.</p></div></div>
+      <div class="chart"><canvas id="tp-chart"></canvas></div>
+    </section>
+  </main>
+
+  <footer class="wrap foot">
+    <p id="foot-info"></p>
+    <p><a href="https://github.com/M-Elsaied/netcfr-explorer">Source code</a> · all numbers are exact expectations
+      computed by the code in the repository.</p>
+  </footer>
+
+  <script src="vendor/chart.umd.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
